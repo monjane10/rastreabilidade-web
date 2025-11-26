@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { FormEvent, ChangeEvent } from "react";
+import { useLocation } from "react-router-dom";
 
 type Inspecao = {
   id: string;
@@ -24,6 +25,8 @@ const mockInspections: Inspecao[] = [
 ];
 
 export function InspectionsPage() {
+  const location = useLocation() as { state?: { modo?: string } };
+
   const [inspections, setInspections] = useState<Inspecao[]>(mockInspections);
   const [showForm, setShowForm] = useState(false);
 
@@ -34,6 +37,13 @@ export function InspectionsPage() {
     resultado: "CONFORME" as "CONFORME" | "NAO_CONFORME",
     observacoes: "",
   });
+
+  // 👉 Se veio do Dashboard com { modo: "registar" }, abre logo o formulário
+  useEffect(() => {
+    if (location.state?.modo === "registar") {
+      setShowForm(true);
+    }
+  }, [location.state]);
 
   const handleChange = (
     e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>

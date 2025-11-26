@@ -1,4 +1,8 @@
+import { useNavigate } from "react-router-dom";
+
 export function DashboardPage() {
+  const navigate = useNavigate();
+
   // Dados mock – só para protótipo
   const resumo = {
     lotesRegistados: 18,
@@ -11,7 +15,8 @@ export function DashboardPage() {
     {
       id: 1,
       tipo: "Lote registado",
-      descricao: "Lote L-2025-001 – Hambúrguer Bovino registado pela Unidade Industrial da Matola.",
+      descricao:
+        "Lote L-2025-001 – Hambúrguer Bovino registado pela Unidade Industrial da Matola.",
       data: "2025-11-20 09:15",
     },
     {
@@ -40,14 +45,16 @@ export function DashboardPage() {
     {
       id: 2,
       tipo: "Validade próxima",
-      descricao: "Lote L-2025-004 com validade a 5 dias – verificar rotação em loja.",
+      descricao:
+        "Lote L-2025-004 com validade a 5 dias – verificar rotação em loja.",
       data: "2025-11-18 10:27",
       severidade: "media",
     },
-     {
+    {
       id: 3,
       tipo: "Produto suspeito",
-      descricao: "Código de lote não encontrado durante consulta pública. Estabelecimento: Congelados.",
+      descricao:
+        "Código de lote não encontrado durante consulta pública. Estabelecimento: Congelados.",
       data: "2025-11-18 10:27",
       severidade: "alta",
     },
@@ -56,10 +63,34 @@ export function DashboardPage() {
   return (
     <div className="space-y-8">
       {/* Cabeçalho do dashboard */}
-      <div className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight text-slate-800">
-          Visão geral
-        </h1>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="space-y-1">
+          <h1 className="text-2xl font-semibold tracking-tight text-slate-800">
+            Visão geral
+          </h1>
+          <p className="text-sm text-slate-600">
+            Monitorização dos principais indicadores e eventos de rastreabilidade.
+          </p>
+        </div>
+
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() =>
+              navigate("/dashboard/inspecoes", { state: { modo: "registar" } })
+            }
+            className="inline-flex items-center justify-center rounded-full bg-amber-400 px-4 py-2 text-xs sm:text-sm font-semibold text-slate-900 hover:bg-amber-300 border border-amber-300 shadow-sm"
+          >
+            Registar inspecção
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate("/dashboard/inspecoes")}
+            className="inline-flex items-center justify-center rounded-full bg-white px-4 py-2 text-xs sm:text-sm font-medium text-slate-700 border border-slate-300 hover:bg-slate-100"
+          >
+            Ver inspecções
+          </button>
+        </div>
       </div>
 
       {/* Cartões de métricas principais */}
@@ -96,7 +127,7 @@ export function DashboardPage() {
             {resumo.inspecoesRealizadas}
           </span>
           <span className="text-[11px] text-slate-500">
-            Inspecções realizadas.
+            Inspecções registadas pelas entidades fiscalizadoras.
           </span>
         </div>
 
@@ -181,7 +212,9 @@ export function DashboardPage() {
                         : "bg-amber-400 text-slate-900"
                     }`}
                   >
-                    {alerta.severidade === "alta" ? "Alta prioridade" : "Média"}
+                    {alerta.severidade === "alta"
+                      ? "Alta prioridade"
+                      : "Média"}
                   </span>
                 </div>
               </div>
