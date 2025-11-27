@@ -1,63 +1,88 @@
 import { NavLink, useNavigate } from "react-router-dom";
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { getSession, logout } from "../services/auth";
+import type { Perfil } from "../mocks/mockData";
 
 const linkBase =
   "flex items-center gap-2 px-3 py-2 text-xs md:text-sm rounded-full transition-colors w-full";
-const linkInactive =
-  "text-slate-600 hover:text-slate-900 hover:bg-slate-100";
+const linkInactive = "text-slate-600 hover:text-slate-900 hover:bg-slate-100";
 const linkActive =
   "text-slate-900 bg-amber-200/70 border border-amber-300 shadow-sm";
+
+function getPerfilLabel(perfil: Perfil): string {
+  switch (perfil) {
+    case "UNIDADE_INDUSTRIAL":
+      return "Unidade Industrial";
+    case "ESTABELECIMENTO":
+      return "Estabelecimento Comercial";
+    default:
+      return "Entidade Fiscalizadora";
+  }
+}
 
 export function Sidebar() {
   const navigate = useNavigate();
   const [openMobile, setOpenMobile] = useState(false);
 
+  const session = getSession();
+  const perfil = session?.perfil ?? "FISCAL";
+  const perfilLabel = getPerfilLabel(perfil);
+
+  const menuItems = useMemo(() => {
+    if (perfil === "UNIDADE_INDUSTRIAL") {
+      return [
+        { to: "/dashboard", label: "Dashboard" },
+        { to: "/dashboard/lotes", label: "Lotes / Materia-prima" },
+        { to: "/dashboard/qr", label: "QR Codes" },
+        { to: "/dashboard/saida", label: "Saida de lote" },
+      ];
+    }
+
+    if (perfil === "ESTABELECIMENTO") {
+      return [
+        { to: "/dashboard", label: "Dashboard" },
+        { to: "/dashboard/recepcao", label: "Recepcao (QR)" },
+        { to: "/dashboard/armazenamento", label: "Armazenamento" },
+        { to: "/dashboard/venda", label: "Estado em venda" },
+      ];
+    }
+
+    return [
+      { to: "/dashboard", label: "Dashboard" },
+      { to: "/dashboard/inspecoes", label: "Inspeccoes" },
+      { to: "/dashboard/lotes", label: "Historico de lotes" },
+      { to: "/dashboard/corretivas", label: "Accoes correctivas" },
+    ];
+  }, [perfil]);
+
   const handleLogout = () => {
+    logout();
     navigate("/");
   };
 
   const NavItems = (
     <>
-      <NavLink
-        to="/dashboard"
-        end
-        className={({ isActive }) =>
-          `${linkBase} ${isActive ? linkActive : linkInactive}`
-        }
-        onClick={() => setOpenMobile(false)}
-      >
-        <span>Dashboard</span>
-      </NavLink>
-
-      <NavLink
-        to="/dashboard/lotes"
-        className={({ isActive }) =>
-          `${linkBase} ${isActive ? linkActive : linkInactive}`
-        }
-        onClick={() => setOpenMobile(false)}
-      >
-        <span>Lotes</span>
-      </NavLink>
-
-      <NavLink
-        to="/dashboard/inspecoes"
-        className={({ isActive }) =>
-          `${linkBase} ${isActive ? linkActive : linkInactive}`
-        }
-        onClick={() => setOpenMobile(false)}
-      >
-        <span>Inspecções</span>
-      </NavLink>
+      {menuItems.map((item) => (
+        <NavLink
+          key={item.to}
+          to={item.to}
+          end={item.to === "/dashboard"}
+          className={({ isActive }) =>
+            `${linkBase} ${isActive ? linkActive : linkInactive}`
+          }
+          onClick={() => setOpenMobile(false)}
+        >
+          <span>{item.label}</span>
+        </NavLink>
+      ))}
     </>
   );
 
   return (
     <>
-      {/* SIDEBAR FIXA – DESKTOP */}
       <aside className="hidden md:block">
         <div className="fixed left-0 top-0 h-screen w-56 border-r border-slate-200 bg-white/90 backdrop-blur flex flex-col">
-          {/* topo com logo */}
-          <div className="px-3 pt-4 pb-3 border-b border-slate-200">
+          <div className="px-2 pt-3 pb-3 border-b border-slate-200">
             <button
               onClick={() => navigate("/dashboard")}
               className="flex items-center gap-2 text-slate-900 hover:text-amber-600 transition-colors"
@@ -69,28 +94,26 @@ export function Sidebar() {
                 <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
                   RastroBlock
                 </span>
+                <span className="text-[10px] text-slate-500">{perfilLabel}</span>
               </div>
             </button>
           </div>
 
-          {/* navegação */}
           <nav className="flex-1 px-3 py-4 space-y-2 overflow-y-auto">
             {NavItems}
           </nav>
 
-          {/* sair */}
           <div className="px-3 pb-4 border-t border-slate-200 pt-3">
             <button
               onClick={handleLogout}
               className="w-full px-3 py-1.5 text-xs font-medium rounded-full border border-slate-300 bg-white text-slate-700 hover:border-red-400 hover:text-red-600 hover:bg-red-50 transition-colors"
             >
-              Terminar sessão
+              Terminar sessao
             </button>
           </div>
         </div>
       </aside>
 
-      {/* HEADER + DRAWER MOBILE */}
       <header className="md:hidden flex items-center justify-between px-3 py-2 border-b border-slate-200 bg-white/90 backdrop-blur">
         <button
           onClick={() => navigate("/dashboard")}
@@ -103,9 +126,7 @@ export function Sidebar() {
             <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
               RastroBlock
             </span>
-            <span className="text-[10px] text-slate-500">
-              Rastreabilidade alimentar
-            </span>
+            <span className="text-[10px] text-slate-500">{perfilLabel}</span>
           </div>
         </button>
 
@@ -130,9 +151,10 @@ export function Sidebar() {
           />
           <div className="absolute left-0 top-0 h-full w-64 bg-white shadow-lg border-r border-slate-200 p-4 flex flex-col">
             <div className="flex items-center justify-between mb-4">
-              <span className="text-xs font-semibold text-slate-700">
-                Menu
-              </span>
+              <div className="flex flex-col">
+                <span className="text-xs font-semibold text-slate-700">Menu</span>
+                <span className="text-[10px] text-slate-500">{perfilLabel}</span>
+              </div>
               <button
                 onClick={() => setOpenMobile(false)}
                 className="text-xs text-slate-500 hover:text-slate-800"
@@ -150,7 +172,7 @@ export function Sidebar() {
               }}
               className="mt-4 px-3 py-1.5 text-xs font-medium rounded-full border border-slate-300 bg-white text-slate-700 hover:border-red-400 hover:text-red-600 hover:bg-red-50 transition-colors w-full"
             >
-              Terminar sessão
+              Terminar sessao
             </button>
           </div>
         </div>

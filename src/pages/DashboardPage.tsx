@@ -1,233 +1,275 @@
-import { useNavigate } from "react-router-dom";
+import { useMemo, useState } from "react";
+import {
+  getInspecoes,
+  getReclamacoes,
+  getLotes,
+  getMovimentos,
+} from "../services/dataStore";
+import { eventosBlockchain } from "../mocks/mockData";
 
-export function DashboardPage() {
-  const navigate = useNavigate();
+type StatProps = {
+  label: string;
+  value: string;
+  delta?: string;
+  positive?: boolean;
+};
 
-  // Dados mock – só para protótipo
-  const resumo = {
-    lotesRegistados: 18,
-    produtosExpostos: 42,
-    inspecoesRealizadas: 7,
-    alertasPendentes: 3,
-  };
+function Stat({ label, value, delta, positive }: StatProps) {
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm flex flex-col gap-1.5">
+      <div className="text-[11px] text-slate-500 uppercase tracking-wide">
+        {label}
+      </div>
+      <div className="text-2xl font-semibold text-slate-900">{value}</div>
+      {delta && (
+        <span
+          className={`text-[11px] font-medium ${
+            positive ? "text-emerald-600" : "text-rose-600"
+          }`}
+        >
+          {delta}
+        </span>
+      )}
+    </div>
+  );
+}
 
-  const actividadeRecente = [
-    {
-      id: 1,
-      tipo: "Lote registado",
-      descricao:
-        "Lote L-2025-001 – Hambúrguer Bovino registado pela Unidade Industrial da Matola.",
-      data: "2025-11-20 09:15",
-    },
-    {
-      id: 2,
-      tipo: "Inspecção",
-      descricao: "Inspecção ao Estabelecimento Comercial Racheio.",
-      data: "2025-11-19 15:40",
-    },
-    {
-      id: 3,
-      tipo: "Consulta pública",
-      descricao: "Consumidor consultou o lote L-2025-001 via QR Code.",
-      data: "2025-11-19 11:22",
-    },
-  ];
+function Card({
+  title,
+  children,
+  action,
+  subtitle,
+}: {
+  title: string;
+  children: React.ReactNode;
+  action?: React.ReactNode;
+  subtitle?: string;
+}) {
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm space-y-3">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <h2 className="text-sm font-semibold text-slate-800">{title}</h2>
+          {subtitle && (
+            <p className="text-[11px] text-slate-500 mt-0.5">{subtitle}</p>
+          )}
+        </div>
+        {action}
+      </div>
+      {children}
+    </div>
+  );
+}
 
-  const alertas = [
-    {
-      id: 1,
-      tipo: "Produto suspeito",
-      descricao:
-        "Código de lote não encontrado durante consulta pública. Estabelecimento: Shoprite.",
-      data: "2025-11-18 18:03",
-      severidade: "alta",
-    },
-    {
-      id: 2,
-      tipo: "Validade próxima",
-      descricao:
-        "Lote L-2025-004 com validade a 5 dias – verificar rotação em loja.",
-      data: "2025-11-18 10:27",
-      severidade: "media",
-    },
-    {
-      id: 3,
-      tipo: "Produto suspeito",
-      descricao:
-        "Código de lote não encontrado durante consulta pública. Estabelecimento: Congelados.",
-      data: "2025-11-18 10:27",
-      severidade: "alta",
-    },
-  ];
+function Sparkline({ data, color }: { data: number[]; color: "amber" | "sky" }) {
+  const max = Math.max(...data, 1);
+  const gradient =
+    color === "amber"
+      ? "bg-gradient-to-t from-amber-300 to-amber-500"
+      : "bg-gradient-to-t from-sky-300 to-sky-500";
 
   return (
-    <div className="space-y-8">
-      {/* Cabeçalho do dashboard */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="space-y-1">
+    <div className="flex items-end gap-1 h-16">
+      {data.map((d, idx) => (
+        <div
+          key={idx}
+          className={`flex-1 rounded-sm ${gradient}`}
+          style={{ height: `${(d / max) * 100}%` }}
+        />
+      ))}
+    </div>
+  );
+}
+
+function MiniTable({
+  headers,
+  rows,
+}: {
+  headers: string[];
+  rows: Array<Array<string | React.ReactNode>>;
+}) {
+  return (
+    <div className="overflow-hidden rounded-xl border border-slate-200">
+      <div className="grid grid-cols-3 bg-slate-50 px-3 py-2 text-[12px] font-semibold text-slate-600">
+        {headers.map((h) => (
+          <div key={h} className="truncate">
+            {h}
+          </div>
+        ))}
+      </div>
+      <div className="divide-y divide-slate-200">
+        {rows.map((r, idx) => (
+          <div
+            key={idx}
+            className="grid grid-cols-3 px-3 py-2 text-sm text-slate-800 bg-white"
+          >
+            {r.map((c, i) => (
+              <div key={i} className="truncate">
+                {c}
+              </div>
+            ))}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export function DashboardPage() {
+  const [inspecoes] = useState(getInspecoes());
+  const [reclamacoes] = useState(getReclamacoes());
+  const [lotes] = useState(getLotes());
+  const [movimentos] = useState(getMovimentos());
+
+  const stats = useMemo(
+    () => [
+      {
+        label: "Total de lotes",
+        value: lotes.length.toString(),
+        positive: true,
+      },
+      {
+        label: "Movimentos registados",
+        value: movimentos.length.toString(),
+        positive: true,
+      },
+      {
+        label: "Inspecções",
+        value: inspecoes.length.toString(),
+        positive: true,
+      },
+      {
+        label: "Reclamações",
+        value: reclamacoes.length.toString(),
+        positive: true,
+      },
+    ],
+    [lotes.length, movimentos.length, inspecoes.length, reclamacoes.length]
+  );
+
+  const sparkData = useMemo(() => [12, 14, 10, 16, 13, 18, 15], []);
+
+  return (
+    <div className="space-y-6">
+      {/* Cabeçalho do painel */}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+        <div>
           <h1 className="text-2xl font-semibold tracking-tight text-slate-800">
-            Visão geral
+            Painel de Fiscalização
           </h1>
           <p className="text-sm text-slate-600">
-            Monitorização dos principais indicadores e eventos de rastreabilidade.
+            Visão geral da rastreabilidade, inspecções, reclamações e eventos
+            registados em Blockchain.
           </p>
         </div>
 
-        <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={() =>
-              navigate("/dashboard/inspecoes", { state: { modo: "registar" } })
-            }
-            className="inline-flex items-center justify-center rounded-full bg-amber-400 px-4 py-2 text-xs sm:text-sm font-semibold text-slate-900 hover:bg-amber-300 border border-amber-300 shadow-sm"
-          >
-            Registar inspecção
-          </button>
-          <button
-            type="button"
-            onClick={() => navigate("/dashboard/inspecoes")}
-            className="inline-flex items-center justify-center rounded-full bg-white px-4 py-2 text-xs sm:text-sm font-medium text-slate-700 border border-slate-300 hover:bg-slate-100"
-          >
-            Ver inspecções
-          </button>
-        </div>
+        <span className="inline-flex items-center justify-center text-xs px-3 py-1 rounded-full bg-amber-100 text-amber-800 border border-amber-200">
+          Monitorização de risco em tempo quase real (protótipo)
+        </span>
       </div>
 
-      {/* Cartões de métricas principais */}
-      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="rounded-xl border border-slate-200 bg-white shadow-sm p-4 flex flex-col gap-1.5">
-          <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">
-            Lotes registados
-          </span>
-          <span className="text-2xl font-semibold text-slate-900">
-            {resumo.lotesRegistados}
-          </span>
-          <span className="text-[11px] text-slate-500">
-            Total de lotes de produtos processados registados no sistema.
-          </span>
-        </div>
-
-        <div className="rounded-xl border border-slate-200 bg-white shadow-sm p-4 flex flex-col gap-1.5">
-          <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">
-            Produtos expostos
-          </span>
-          <span className="text-2xl font-semibold text-slate-900">
-            {resumo.produtosExpostos}
-          </span>
-          <span className="text-[11px] text-slate-500">
-            Lotes actualmente em exposição nos estabelecimentos comerciais.
-          </span>
-        </div>
-
-        <div className="rounded-xl border border-slate-200 bg-white shadow-sm p-4 flex flex-col gap-1.5">
-          <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">
-            Inspecções realizadas
-          </span>
-          <span className="text-2xl font-semibold text-slate-900">
-            {resumo.inspecoesRealizadas}
-          </span>
-          <span className="text-[11px] text-slate-500">
-            Inspecções registadas pelas entidades fiscalizadoras.
-          </span>
-        </div>
-
-        <div className="rounded-xl border border-slate-200 bg-white shadow-sm p-4 flex flex-col gap-1.5">
-          <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">
-            Alertas pendentes
-          </span>
-          <span className="text-2xl font-semibold text-red-600">
-            {resumo.alertasPendentes}
-          </span>
-          <span className="text-[11px] text-slate-500">
-            Casos que requerem análise, como suspeita de falsificação ou
-            inconsistências.
-          </span>
-        </div>
+      {/* Estatísticas principais */}
+      <section className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        {stats.map((s) => (
+          <Stat
+            key={s.label}
+            label={s.label}
+            value={s.value}
+            positive={s.positive}
+          />
+        ))}
       </section>
 
-      {/* Secção inferior em duas colunas */}
-      <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Actividade recente */}
-        <div className="rounded-xl border border-slate-200 bg-white shadow-sm p-5 space-y-3">
-          <div className="flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-slate-900">
-              Actividade recente
-            </h2>
-            <span className="text-[11px] text-slate-500">
-              Últimos eventos registados
-            </span>
-          </div>
+      {/* Secção intermédia: tendência + blockchain + reclamações */}
+      <section className="grid md:grid-cols-3 gap-3">
+        <Card
+          title="Tendência de inspecções"
+          subtitle="Distribuição dos últimos períodos (dados simulados)."
+        >
+          <Sparkline data={sparkData} color="amber" />
+          <p className="text-[11px] text-slate-500">
+            Este gráfico será alimentado pelos registos reais de inspecção no
+            modelo final.
+          </p>
+        </Card>
 
-          <div className="space-y-3">
-            {actividadeRecente.map((item) => (
-              <div
-                key={item.id}
-                className="border border-slate-200 rounded-lg px-3 py-2.5 bg-slate-50/60"
+        <Card
+          title="Eventos Blockchain"
+          subtitle="Últimas operações de registo de lote e actualização de estado."
+        >
+          <MiniTable
+            headers={["Evento", "Data", "Hash"]}
+            rows={eventosBlockchain.map((e) => [
+              `#${e.idEvento} · ${e.tipoEvento}`,
+              e.dataHora,
+              <span
+                key={e.hashTransacao}
+                className="text-[11px] text-slate-500 truncate"
               >
-                <p className="text-xs font-semibold text-slate-700">
-                  {item.tipo}
-                </p>
-                <p className="text-xs text-slate-600 mt-0.5">
-                  {item.descricao}
-                </p>
-                <p className="text-[11px] text-slate-400 mt-1">
-                  {item.data}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
+                {e.hashTransacao}
+              </span>,
+            ])}
+          />
+        </Card>
 
-        {/* Alertas e possíveis irregularidades */}
-        <div className="rounded-xl border border-slate-200 bg-white shadow-sm p-5 space-y-3">
-          <div className="flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-slate-900">
-              Alertas e irregularidades
-            </h2>
-            <span className="text-[11px] text-slate-500">
-              Monitoria de risco
-            </span>
-          </div>
-
-          <div className="space-y-3">
-            {alertas.map((alerta) => (
-              <div
-                key={alerta.id}
-                className={`rounded-lg px-3 py-2.5 border text-xs ${
-                  alerta.severidade === "alta"
-                    ? "border-red-300 bg-red-50"
-                    : "border-amber-300 bg-amber-50"
-                }`}
+        <Card
+          title="Reclamações e denúncias"
+          subtitle="Fluxo de notificações originadas pelo consumidor e pelas inspecções."
+        >
+          <MiniTable
+            headers={["Lote", "Estado", "Data"]}
+            rows={reclamacoes.map((r) => [
+              `Lote ${r.loteId}`,
+              <span
+                key={r.idReclamacao}
+                className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] bg-amber-100 text-amber-800"
               >
-                <p className="font-semibold text-slate-900">{alerta.tipo}</p>
-                <p className="mt-0.5 text-slate-700">{alerta.descricao}</p>
-                <div className="mt-1 flex items-center justify-between">
-                  <span className="text-[11px] text-slate-500">
-                    {alerta.data}
-                  </span>
-                  <span
-                    className={`px-2 py-0.5 rounded-md text-[10px] font-semibold uppercase tracking-wide ${
-                      alerta.severidade === "alta"
-                        ? "bg-red-600 text-white"
-                        : "bg-amber-400 text-slate-900"
-                    }`}
-                  >
-                    {alerta.severidade === "alta"
-                      ? "Alta prioridade"
-                      : "Média"}
-                  </span>
-                </div>
-              </div>
-            ))}
-
-            {alertas.length === 0 && (
-              <p className="text-xs text-slate-500">
-                Não existem alertas pendentes no momento.
-              </p>
-            )}
-          </div>
-        </div>
+                {r.estado}
+              </span>,
+              r.dataReclamacao,
+            ])}
+          />
+        </Card>
       </section>
+
+      {/* Últimas inspecções */}
+<Card
+  title="Últimas inspecções registadas"
+  subtitle="Resumo dos estabelecimentos e unidades industriais inspecionados."
+>
+  <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+
+    {/* Cabeçalho da tabela */}
+    <div className="grid grid-cols-4 bg-slate-50 px-4 py-2 text-[12px] font-semibold text-slate-600">
+      <div>Local</div>
+      <div>Data</div>
+      <div>Resultado</div>
+      <div>Observações</div>
+    </div>
+
+    {/* Linhas da tabela */}
+    <div className="divide-y divide-slate-200">
+      {inspecoes.map((i) => (
+        <div
+          key={i.idInspecao}
+          className="grid grid-cols-4 px-4 py-2 text-sm text-slate-800"
+        >
+          <div className="truncate">{i.localTipo}</div>
+          <div className="text-slate-700">{i.dataInspecao}</div>
+          <div className="text-slate-700">{i.resultado}</div>
+          <div className="text-slate-600 truncate">{i.observacoes}</div>
+        </div>
+      ))}
+
+      {inspecoes.length === 0 && (
+        <div className="px-4 py-3 text-sm text-slate-500">
+          Ainda não existem inspecções registadas.
+        </div>
+      )}
+    </div>
+  </div>
+</Card>
+
     </div>
   );
 }
