@@ -1,4 +1,5 @@
 import { Routes, Route, Navigate } from "react-router-dom";
+import { type ReactNode } from "react";
 import { Layout } from "../components/Layout";
 import { LoginPage } from "../pages/LoginPage";
 import { LandingPage } from "../pages/LandingPage";
@@ -8,7 +9,7 @@ import { LotsPage } from "../pages/LotsPage";
 import { PublicScanPage } from "../pages/PublicScanPage";
 import { getSession } from "../services/auth";
 
-function PrivateRoute({ children }: { children: JSX.Element }) {
+function PrivateRoute({ children }: { children: ReactNode }) {
   const session = getSession();
   if (!session) return <Navigate to="/login" replace />;
   return children;
